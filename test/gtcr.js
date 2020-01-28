@@ -26,8 +26,6 @@ contract('GTCR', function(accounts) {
   const registrationMetaEvidence = 'registrationMetaEvidence.json'
   const clearingMetaEvidence = 'clearingMetaEvidence.json'
 
-  const gasPrice = 5000000000
-
   let arbitrator
   let MULTIPLIER_DIVISOR
   let submitterTotalCost
@@ -47,7 +45,8 @@ contract('GTCR', function(accounts) {
       value: arbitrationCost
     }) // Create a dispute so the index in tests will not be a default value.
 
-    gtcr = await GTCR.new(
+    gtcr = await GTCR.new()
+    gtcr.initialize(
       arbitrator.address,
       arbitratorExtraData,
       other, // Temporarily set connectedTCR to 'other' account for test purposes.
@@ -946,7 +945,7 @@ contract('GTCR', function(accounts) {
     await gtcr.executeRequest(itemID, { from: governor })
 
     // 2th request.
-    await gtcr.removeItem('0xaabbaa', '', {
+    await gtcr.removeItem('0xaabbaa', '/ipfs/Qw..', {
       from: requester,
       value: removalTotalCost
     })

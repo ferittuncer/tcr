@@ -103,9 +103,12 @@ contract GeneralizedTCR is IArbitrable, IEvidence {
     mapping(bytes32 => uint) public itemIDtoIndex; // Maps an item's ID to its position in the list.
     mapping(uint => RequestID) public evidenceGroupIDToRequestID; // Maps the evidenceGroupID to a requestID. This is useful quickly find an item and request from an Evidence event.
 
+    bool public initialized;
+
      /* Modifiers */
 
     modifier onlyGovernor {require(msg.sender == governor, "The caller must be the governor."); _;}
+    modifier isInitialized {require(initialized, "Contract must be initialized."); _;}
 
     /* Events */
 
@@ -166,8 +169,10 @@ contract GeneralizedTCR is IArbitrable, IEvidence {
      */
     event ConnectedTCRSet(address indexed _connectedTCR);
 
+    /* External and Public */
+
     /**
-     *  @dev Constructs the arbitrable curated registry. The arbitrator is trusted to support appeal periods and not reenter.
+     *  @dev Initializes the arbitrable curated registry. The arbitrator is trusted to support appeal periods and not reenter.
      *  @param _arbitrator The trusted arbitrator to resolve potential disputes.
      *  @param _arbitratorExtraData Extra data for the trusted arbitrator contract.
      *  @param _connectedTCR The address of the TCR that stores related TCR addresses. This parameter can be left empty.
@@ -184,20 +189,21 @@ contract GeneralizedTCR is IArbitrable, IEvidence {
      *  - The winner has to pay as fee stake for a round;
      *  - The looser has to pay as fee stake for a round.
      */
-    constructor(
+    function initialize(
         IArbitrator _arbitrator,
-        bytes memory _arbitratorExtraData,
+        bytes calldata _arbitratorExtraData,
         address _connectedTCR,
-        string memory _registrationMetaEvidence,
-        string memory _clearingMetaEvidence,
+        string calldata _registrationMetaEvidence,
+        string calldata _clearingMetaEvidence,
         address _governor,
         uint _submissionBaseDeposit,
         uint _removalBaseDeposit,
         uint _submissionChallengeBaseDeposit,
         uint _removalChallengeBaseDeposit,
         uint _challengePeriodDuration,
-        uint[3] memory _stakeMultipliers
-    ) public {
+        uint[3] calldata _stakeMultipliers
+    ) external {
+        require(!initialized, "Contract already initialized");
         emit MetaEvidence(0, _registrationMetaEvidence);
         emit MetaEvidence(1, _clearingMetaEvidence);
         emit ConnectedTCRSet(_connectedTCR);
@@ -213,9 +219,8 @@ contract GeneralizedTCR is IArbitrable, IEvidence {
         sharedStakeMultiplier = _stakeMultipliers[0];
         winnerStakeMultiplier = _stakeMultipliers[1];
         loserStakeMultiplier = _stakeMultipliers[2];
+        initialized = true;
     }
-
-    /* External and Public */
 
     // ************************ //
     // *       Requests       * //
@@ -224,7 +229,7 @@ contract GeneralizedTCR is IArbitrable, IEvidence {
     /** @dev Submit a request to register an item. Accepts enough ETH to the deposit, reimburses the rest.
      *  @param _item The data describing the item.
      */
-    function addItem(bytes calldata _item) external payable {
+    function addItem(bytes calldata _item) external payable isInitialized {
         bytes32 itemID = keccak256(_item);
         require(items[itemID].status == Status.Absent, "Item must be absent to be added.");
         requestStatusChange(_item, submissionBaseDeposit);
